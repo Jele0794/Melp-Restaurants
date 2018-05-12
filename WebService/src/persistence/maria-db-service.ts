@@ -17,6 +17,7 @@ export class MariaDBService {
         connection.query('SELECT * FROM ??', [tableName], (error, results) => {
             if (error) {
                 this.handleSqlError(error, connection);
+                subject.next(undefined);                
             }
             let mappedResults: any = [];
             // map each result.
@@ -44,13 +45,14 @@ export class MariaDBService {
         let subject: Subject<T[]> = new Subject();
         let sql: string;
         if (equals) {
-            sql = 'SELECT * FROM ?? WHERE ' + identifier + ' = ' + connection.escape(value);
+            sql = `SELECT * FROM ?? WHERE ${identifier} = ${connection.escape(value)}`;
         } else {
-            sql = 'SELECT * FROM ?? WHERE '+ identifier +' LIKE \'%' + value + '%\'';
+            sql = `SELECT * FROM ?? WHERE ${identifier} LIKE \'%${value}%\'`;
         }    
         connection.query(sql, [tableName], (error, results) => {
             if (error) {
                 this.handleSqlError(error, connection);
+                subject.next(undefined);
             }
             let mappedResults: any = [];
             // map each result.
@@ -58,11 +60,48 @@ export class MariaDBService {
             // send to subject.
             subject.next(mappedResults);
         })
-            .on('fields', (fields, index) => console.log(fields))
         // on finish, close connection.
         .on('end', () => this.safeCloseConnection(connection));
 
         return subject.asObservable();        
+    }
+
+    public static create<T>(tableName: string, values: T[]): Observable<T[]> {
+        let connection: Connection = this.generateConnection();
+        let subject: Subject<T[]> = new Subject();
+        let valuesString: string[] = [];
+        let sql: string;
+        let reducedValues: string;
+        let modDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+        values.forEach((value) => valuesString.push(value.toString()));
+        reducedValues = valuesString.map(value => `(${value}, \'${modDate}\', 0, 1)`).join(', ');
+        sql = `INSERT INTO ${tableName} VALUES ${reducedValues};`;
+        
+        connection.beginTransaction((error) => {
+            if (error) {
+                this.handleSqlError(error, connection);
+                subject.next(undefined)                
+            }
+            // insert values.
+            connection.query(sql, (error, results) => {
+                if (error) {
+                    connection.rollback(() => this.handleSqlError(error, connection));
+                    subject.next(undefined)                    
+                }
+                // commit changes.
+                connection.commit((error) => {
+                    if (error) {
+                        connection.rollback(() => this.handleSqlError(error, connection));
+                        subject.next(undefined)                        
+                    }
+                    subject.next(values)
+                });
+            });
+
+        });
+
+        return subject.asObservable();
     }
 
     /**

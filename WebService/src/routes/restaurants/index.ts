@@ -40,7 +40,18 @@ export class RestaurantApi {
                 res.status(400).send('Error: To create a restaurant, it is needed data.')
             }
             // create restaurant on database.
-            res.json(restaurants);
+            MariaDBService.create<Restaurant>(Constants.K_RESTAURANT, restaurants)
+                .pipe(take(1))
+                .subscribe((restaurantsResult: Restaurant[]) => {
+                    // assign result to restaurants.
+                    restaurants = restaurantsResult;
+                    // if restaurants is undefined, send server error.
+                    if (!restaurants) {
+                        res.status(500).send('Error: Server Error or duplicated data.');
+                    }
+                    // else, send result.
+                    res.json(restaurants.length === 1 ? restaurants[0] : []);
+                });
         });
     }
 
@@ -160,12 +171,12 @@ export class RestaurantApi {
         // validate if requestBody is an array.
         if (Array.isArray(requestBody)) {
             // assign requestBody to restaurants
-            restaurants = requestBody;
+            restaurants = requestBody.map(req => RestaurantMapper.fromObjToModel(req));
         } else {
             // create an empty array
             restaurants = [];
             // push the requestBody object
-            restaurants.push(requestBody);
+            restaurants.push(RestaurantMapper.fromObjToModel(requestBody));
         }
         return restaurants;
     }

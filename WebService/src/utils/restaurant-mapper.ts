@@ -23,4 +23,27 @@ export class RestaurantMapper {
 
         return restaurant;
     }
+
+    /**
+     * Returns a created restaurant.
+     *
+     * @param restaurant Restaurant object.
+     */
+    public static fromObjToModel(restaurant: Restaurant): Restaurant {
+        let newRestaurant: Restaurant = new Restaurant();
+
+        newRestaurant.id = restaurant.id;
+        newRestaurant.rating = restaurant.rating;
+        newRestaurant.name = restaurant.name;
+        newRestaurant.site = restaurant.site;
+        newRestaurant.email = restaurant.email;
+        newRestaurant.phone = restaurant.phone;
+        newRestaurant.street = restaurant.street;
+        newRestaurant.city = restaurant.city;
+        newRestaurant.state = restaurant.state;
+        newRestaurant.lat = restaurant.lat;
+        newRestaurant.lng = restaurant.lng;
+
+        return newRestaurant;
+    }
 }
