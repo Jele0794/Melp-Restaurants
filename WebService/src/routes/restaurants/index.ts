@@ -17,6 +17,8 @@ export class RestaurantApi {
         this.createRoute(this.router);
         // create get method.
         this.findRoute(this.router);
+        // create get method to search by position.
+        this.searchByPosition(this.router);
         // create update method.
         this.updateRoute(this.router);
         // create delete method.
@@ -120,6 +122,36 @@ export class RestaurantApi {
     }
 
     /**
+     * Get a latitude, longitude and a radious to search for restaurants
+     * in that area.
+     * 
+     * @param router Express Router object.
+     */
+    private searchByPosition(router: Router) {
+        router.get('/restaurant/statistics', (req: Request, res: Response, next: NextFunction) => {
+            let restaurants: Restaurant[] = [];
+            if (!req.query.latitude || !req.query.longitude || !req.query.radius ) {
+                res.status(400).send('Error: A latitud, longitude and a radious is needed.')
+            }
+            let lat: number = parseFloat(req.query.latitude);
+            let lng: number = parseFloat(req.query.longitude);
+            let radius: number = parseInt(req.query.radius);
+            MariaDBService.radiousSearch<Restaurant>(Constants.K_RESTAURANT, lat, lng, radius, RestaurantMapper.fromDbToModel)
+                .pipe(take(1))
+                .subscribe((restaurantsResult: Restaurant[]) => {
+                    // assign result to restaurants.
+                    restaurants = restaurantsResult;
+                    // if restaurants is undefined, send server error.
+                    if (!restaurants) {
+                        res.status(500).send('Error: Server Error');
+                    }
+                    // else, send result.
+                    res.json(restaurants);
+                });
+        });
+    }
+
+    /**
      * Create a put method that receives one or more restaurants to update
      * on a database.
      *
@@ -178,14 +210,14 @@ export class RestaurantApi {
                     res.json(`${idDeleted} was deleted`);
                 });
             // iterate restaurants list and delete each on database.
-        })
+        });
     }
 
     private optionsRoute(router: Router) {
         router.options('restaurant', (req: Request, res: Response, next: NextFunction) => {
             res.setHeader('Allow', 'OPTIONS, GET, PUT, POST, DELETE');
             res.send('Allow: OPTIONS, GET, PUT, POST, DELETE');
-        })
+        });
     }
 
     /**

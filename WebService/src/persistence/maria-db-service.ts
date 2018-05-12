@@ -14,11 +14,11 @@ export class MariaDBService {
     public static findAll<T>(tableName: string, mapper?: any): Observable<T[]> {
         let connection: Connection = this.generateConnection();
         let subject: Subject<T[]> = new Subject();
-        
+
         connection.query('SELECT * FROM ??', [tableName], (error, results) => {
             if (error) {
                 this.handleSqlError(error, connection);
-                subject.next(undefined);                
+                subject.next(undefined);
             }
             let mappedResults: any = [];
             // map each result.
@@ -49,7 +49,7 @@ export class MariaDBService {
             sql = `SELECT * FROM ?? WHERE ${identifier} = ${connection.escape(value)}`;
         } else {
             sql = `SELECT * FROM ?? WHERE ${identifier} LIKE \'%${value}%\'`;
-        }    
+        }
         connection.query(sql, [tableName], (error, results) => {
             if (error) {
                 this.handleSqlError(error, connection);
@@ -64,7 +64,7 @@ export class MariaDBService {
         // on finish, close connection.
         .on('end', () => this.safeCloseConnection(connection));
 
-        return subject.asObservable();        
+        return subject.asObservable();
     }
 
     /**
@@ -84,23 +84,23 @@ export class MariaDBService {
         values.forEach((value) => valuesString.push(value.toString()));
         reducedValues = valuesString.map(value => `(${value}, \'${modDate}\', 0, 1)`).join(', ');
         sql = `INSERT INTO ${tableName} VALUES ${reducedValues};`;
-        
+
         connection.beginTransaction((error) => {
             if (error) {
                 this.handleSqlError(error, connection);
-                subject.next(undefined)                
+                subject.next(undefined)
             }
             // insert values.
             connection.query(sql, (error, results) => {
                 if (error) {
                     connection.rollback(() => this.handleSqlError(error, connection));
-                    subject.next(undefined)                    
+                    subject.next(undefined)
                 }
                 // commit changes.
                 connection.commit((error) => {
                     if (error) {
                         connection.rollback(() => this.handleSqlError(error, connection));
-                        subject.next(undefined)                        
+                        subject.next(undefined)
                     }
                     subject.next(values)
                 });
@@ -113,6 +113,15 @@ export class MariaDBService {
         return subject.asObservable();
     }
 
+    /**
+     * 
+     * @param tableName DB table name.
+     * @param value Object to update.
+     * @param columns Table columns.
+     * @param identifier Where identifier.
+     * @param whereValue Where value.
+     * @param mapper Mapper function.
+     */
     public static update<T>(tableName: string, value: T, columns: string[], identifier: string, whereValue: string, mapper: any): Observable<T> {
         let connection: Connection = this.generateConnection();
         let subject: Subject<T> = new Subject();
@@ -160,6 +169,13 @@ export class MariaDBService {
         return subject.asObservable();
     }
 
+    /**
+     * Change row active flag to false.
+     *
+     * @param tableName DB table name.
+     * @param idColumn Name of ID column.
+     * @param id ID value.
+     */
     public static delete<T>(tableName: string, idColumn: string, id: string): Observable<string> {
         let connection: Connection = this.generateConnection();
         let subject: Subject<string> = new Subject();
@@ -172,6 +188,41 @@ export class MariaDBService {
             }
             // send to subject.
             subject.next(id);
+        })
+        // on finish, close connection.
+        .on('end', () => this.safeCloseConnection(connection));
+
+        return subject.asObservable();
+    }
+
+    /**
+     * Special Query.
+     *
+     * @param tableName DB table name
+     * @param lat Latitude.
+     * @param lng Longitude.
+     * @param distanceMeters Distance in meters.
+     * @param mapper Mapper function
+     */
+    public static radiousSearch<T>(tableName: string, lat: number, lng: number, distanceMeters: number, mapper: any): Observable<T[]> {
+        let connection: Connection = this.generateConnection();
+        let subject: Subject<T[]> = new Subject();
+        let sql: string = `SELECT *
+        FROM ${tableName}
+        WHERE
+        ACOS( SIN( RADIANS( \`${Constants.RESTAURANT_TABLE.FL_LAT}\` ) ) * SIN( RADIANS( ${lat} ) ) + COS( RADIANS( \`${Constants.RESTAURANT_TABLE.FL_LAT}\` ) )
+        * COS( RADIANS( ${lat} )) * COS( RADIANS( \`${Constants.RESTAURANT_TABLE.FL_LNG}\` ) - RADIANS( ${lng} )) ) * 6380000 < ${distanceMeters}`;
+
+        connection.query(sql, (error, results) => {
+            if (error) {
+                this.handleSqlError(error, connection);
+                subject.next(undefined);
+            }
+            let mappedResults: any = [];
+            // map each result.
+            results.forEach((res: any) => mappedResults.push(mapper(res)));
+            // send to subject.
+            subject.next(mappedResults);
         })
         // on finish, close connection.
         .on('end', () => this.safeCloseConnection(connection));
