@@ -104,7 +104,9 @@ export class MariaDBService {
                     }
                     subject.next(values)
                 });
-            });
+            })
+            // on finish, close connection.
+            .on('end', () => this.safeCloseConnection(connection));
 
         });
 
@@ -114,9 +116,7 @@ export class MariaDBService {
     public static update<T>(tableName: string, value: T, columns: string[], identifier: string, whereValue: string, mapper: any): Observable<T> {
         let connection: Connection = this.generateConnection();
         let subject: Subject<T> = new Subject();
-        let valuesString: string[] = [];
         let sql: string;
-        let reducedValues: string;
         let modDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
         let columnsStr: string[] = [];
         value = mapper(value);
@@ -151,9 +151,30 @@ export class MariaDBService {
                     }
                     subject.next(value);
                 });
-            });
+            })
+            // on finish, close connection.
+            .on('end', () => this.safeCloseConnection(connection));
 
         });
+
+        return subject.asObservable();
+    }
+
+    public static delete<T>(tableName: string, idColumn: string, id: string): Observable<string> {
+        let connection: Connection = this.generateConnection();
+        let subject: Subject<string> = new Subject();
+        let sql: string = `UPDATE ${tableName} SET ${Constants.RESTAURANT_TABLE.FG_ACTIVE} = 0 WHERE ${idColumn} = \'${id}\'`;
+
+        connection.query(sql, (error, results) => {
+            if (error) {
+                this.handleSqlError(error, connection);
+                subject.next(undefined);
+            }
+            // send to subject.
+            subject.next(id);
+        })
+        // on finish, close connection.
+        .on('end', () => this.safeCloseConnection(connection));
 
         return subject.asObservable();
     }

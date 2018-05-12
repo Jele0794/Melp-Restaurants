@@ -161,11 +161,22 @@ export class RestaurantApi {
      */
     private deleteRoute(router: Router) {
         router.delete('/restaurant', (req: Request, res: Response, next: NextFunction) => {
-            let restaurants: Restaurant[] = this.getRestaurantArray(req.body);
+            let restaurant: Restaurant = RestaurantMapper.fromObjToModel(req.body);
             // validate that restaurants array is not empty.
-            if (restaurants.length === 0) {
+            if (!restaurant) {
                 res.status(400).send('Error: To delete data, the system needs at least one restaurant.')
             }
+
+            MariaDBService.delete<Restaurant>(Constants.K_RESTAURANT, Constants.ID_RESTAURANT, restaurant.id)
+            .pipe(take(1))
+                .subscribe((idDeleted: string) => {
+                    // if restaurants is undefined, send server error.
+                    if (!idDeleted || idDeleted === '') {
+                        res.status(500).send('Error: Server Error.');
+                    }
+                    // else, send result.
+                    res.json(`${idDeleted} was deleted`);
+                });
             // iterate restaurants list and delete each on database.
         })
     }
