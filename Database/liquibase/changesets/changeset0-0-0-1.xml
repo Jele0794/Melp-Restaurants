@@ -1,0 +1,29 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet author="jorge.lopez" id="100518-1">
+    <createTable tableName="K_RESTAURANT">
+        <column name="ID_RESTAURANT" type="varchar(40)">
+            <constraints primaryKey="true" primaryKeyName="PK_K_RESTAURANT"/>
+        </column>
+        <column name="NU_RATING" type="int"/>
+        <column name="DS_NAME" type="varchar(50)"/>
+        <column name="DS_SITE" type="varchar(50)"/>
+        <column name="DS_EMAIL" type="varchar(50)"/>
+        <column name="DS_PHONE" type="varchar(50)"/>
+        <column name="DS_STREET" type="varchar(50)"/>
+        <column name="DS_CITY" type="varchar(50)"/>
+        <column name="DS_STATE" type="varchar(50)"/>
+        <column name="FL_LAT" type="double"/>
+        <column name="FL_LNG" type="double"/>
+        <column defaultValueComputed="NOW()" name="DT_LAST_MODIFICATION" type="datetime">
+                <constraints nullable="false"/>
+        </column>
+        <column defaultValueNumeric="0" name="ID_LAST_USER_MODIFIER" type="int">
+            <constraints nullable="false"/>
+        </column>
+        <column defaultValueNumeric="1" name="FG_ACTIVE" type="bit">
+            <constraints nullable="false"/>
+        </column>
+    </createTable>
+</changeSet>
+</databaseChangeLog>
