@@ -50,7 +50,7 @@ export class RestaurantApi {
                         res.status(500).send('Error: Server Error or duplicated data.');
                     }
                     // else, send result.
-                    res.json(restaurants.length === 1 ? restaurants[0] : []);
+                    res.json(restaurants.length === 1 ? restaurants[0] : restaurants);
                 });
         });
     }
