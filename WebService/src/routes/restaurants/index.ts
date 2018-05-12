@@ -39,7 +39,12 @@ export class RestaurantApi {
             let restaurants: Restaurant[] = this.getRestaurantArray(req.body);
             // validate that restaurants array is not empty.
             if (restaurants.length === 0) {
-                res.status(400).send('Error: To create a restaurant, it is needed data.')
+                res.status(400).send('Error: To create a restaurant, it is needed data.');
+            } else if (this.validatesRatingRange(restaurants).length > 0) {
+                res.status(400).json({
+                    error: 'Error: Some ratings are above or below the range.',
+                    restaurants: this.validatesRatingRange(restaurants)
+                });
             }
             // create restaurant on database.
             MariaDBService.create<Restaurant>(Constants.K_RESTAURANT, restaurants)
@@ -152,26 +157,6 @@ export class RestaurantApi {
         });
     }
 
-    private getStatistics(restaurants: Restaurant[]): Statistics {
-        let statistics: Statistics = new Statistics();
-        let ratingsArray: number[] = restaurants.map(restaurant => restaurant.rating)
-        let ratingSum: number = ratingsArray
-            .reduce((rating, current) => rating + current);
-        let sqrDiffs: number[];
-        let diffsAvr: number;
-
-        statistics.count = restaurants.length;
-        statistics.avg = ratingSum / statistics.count;
-        
-        sqrDiffs = ratingsArray
-            .map(rating => Math.pow(rating - statistics.avg, 2) );
-        diffsAvr = sqrDiffs.reduce((diff, curr) => diff + curr) / sqrDiffs.length;
-
-        statistics.std = Math.sqrt(diffsAvr);
-
-        return statistics;
-    }
-
     /**
      * Create a put method that receives one or more restaurants to update
      * on a database.
@@ -260,5 +245,39 @@ export class RestaurantApi {
             restaurants.push(RestaurantMapper.fromObjToModel(requestBody));
         }
         return restaurants;
+    }
+
+    /**
+     * Calculate some statistics.
+     *
+     * @param restaurants Restaurant array.
+     */
+    private getStatistics(restaurants: Restaurant[]): Statistics {
+        let statistics: Statistics = new Statistics();
+        let ratingsArray: number[] = restaurants.map(restaurant => restaurant.rating)
+        let ratingSum: number = ratingsArray
+            .reduce((rating, current) => rating + current);
+        let sqrDiffs: number[];
+        let diffsAvr: number;
+
+        statistics.count = restaurants.length;
+        statistics.avg = ratingSum / statistics.count;
+
+        sqrDiffs = ratingsArray
+            .map(rating => Math.pow(rating - statistics.avg, 2));
+        diffsAvr = sqrDiffs.reduce((diff, curr) => diff + curr) / sqrDiffs.length;
+
+        statistics.std = Math.sqrt(diffsAvr);
+
+        return statistics;
+    }
+
+    /**
+     * Validate that the rating is correct.
+     *
+     * @param restaurants Restaurants array.
+     */
+    private validatesRatingRange(restaurants: Restaurant[]): Restaurant[] {
+        return restaurants.filter(restaurant => restaurant.rating < 0 || restaurant.rating > 4)
     }
 }
