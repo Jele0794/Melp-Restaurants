@@ -32,3 +32,9 @@ export class RestaurantDB {
     public ID_LAST_USER_MODIFIER: number;
     public FG_ACTIVE: boolean;
 }
+
+export class Statistics {
+    count: number;
+    avg: number;
+    std: number;
+}

@@ -1,6 +1,6 @@
 import { Router, Request, NextFunction } from "express";
 import { Response } from "express";
-import { Restaurant } from "../../models/restaurant";
+import { Restaurant, Statistics } from "../../models/restaurant";
 import { MariaDBService } from "../../persistence/maria-db-service";
 import { Observable } from "rxjs";
 import { take } from 'rxjs/operators';
@@ -39,7 +39,12 @@ export class RestaurantApi {
             let restaurants: Restaurant[] = this.getRestaurantArray(req.body);
             // validate that restaurants array is not empty.
             if (restaurants.length === 0) {
-                res.status(400).send('Error: To create a restaurant, it is needed data.')
+                res.status(400).send('Error: To create a restaurant, it is needed data.');
+            } else if (this.validatesRatingRange(restaurants).length > 0) {
+                res.status(400).json({
+                    error: 'Error: Some ratings are above or below the range.',
+                    restaurants: this.validatesRatingRange(restaurants)
+                });
             }
             // create restaurant on database.
             MariaDBService.create<Restaurant>(Constants.K_RESTAURANT, restaurants)
@@ -130,6 +135,7 @@ export class RestaurantApi {
     private searchByPosition(router: Router) {
         router.get('/restaurant/statistics', (req: Request, res: Response, next: NextFunction) => {
             let restaurants: Restaurant[] = [];
+            let statistics: Statistics = new Statistics();
             if (!req.query.latitude || !req.query.longitude || !req.query.radius ) {
                 res.status(400).send('Error: A latitud, longitude and a radious is needed.')
             }
@@ -146,7 +152,7 @@ export class RestaurantApi {
                         res.status(500).send('Error: Server Error');
                     }
                     // else, send result.
-                    res.json(restaurants);
+                    res.json(this.getStatistics(restaurants));
                 });
         });
     }
@@ -239,5 +245,39 @@ export class RestaurantApi {
             restaurants.push(RestaurantMapper.fromObjToModel(requestBody));
         }
         return restaurants;
+    }
+
+    /**
+     * Calculate some statistics.
+     *
+     * @param restaurants Restaurant array.
+     */
+    private getStatistics(restaurants: Restaurant[]): Statistics {
+        let statistics: Statistics = new Statistics();
+        let ratingsArray: number[] = restaurants.map(restaurant => restaurant.rating)
+        let ratingSum: number = ratingsArray
+            .reduce((rating, current) => rating + current);
+        let sqrDiffs: number[];
+        let diffsAvr: number;
+
+        statistics.count = restaurants.length;
+        statistics.avg = ratingSum / statistics.count;
+
+        sqrDiffs = ratingsArray
+            .map(rating => Math.pow(rating - statistics.avg, 2));
+        diffsAvr = sqrDiffs.reduce((diff, curr) => diff + curr) / sqrDiffs.length;
+
+        statistics.std = Math.sqrt(diffsAvr);
+
+        return statistics;
+    }
+
+    /**
+     * Validate that the rating is correct.
+     *
+     * @param restaurants Restaurants array.
+     */
+    private validatesRatingRange(restaurants: Restaurant[]): Restaurant[] {
+        return restaurants.filter(restaurant => restaurant.rating < 0 || restaurant.rating > 4)
     }
 }
