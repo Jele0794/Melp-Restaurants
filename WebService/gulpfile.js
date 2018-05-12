@@ -26,3 +26,4 @@ gulp.task('express', (done) => {
 
 // serve task.
 gulp.task('serve', gulp.series('tsc-compile', 'express:watch', 'express'));
+gulp.task('build', gulp.series('tsc-compile', 'express'));
