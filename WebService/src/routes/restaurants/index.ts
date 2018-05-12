@@ -5,6 +5,7 @@ import { MariaDBService } from "../../persistence/maria-db-service";
 import { Observable } from "rxjs";
 import { take } from 'rxjs/operators';
 import { RestaurantMapper } from "../../utils/restaurant-mapper";
+import { Constants } from "../../utils/constants";
 
 export class RestaurantApi {
 
@@ -57,15 +58,39 @@ export class RestaurantApi {
             let restaurants: Restaurant[] = [];
             if (req.query.id) {
                 // search database by id and return an array of matching restaurants
-                console.log(req.query.id);
-                res.send('ID received.');
+                MariaDBService.findBy<Restaurant>(Constants.K_RESTAURANT, 'ID_RESTAURANT', req.query.id, true, RestaurantMapper.fromDbToModel)
+                    // just take 1 value.
+                    .pipe(take(1))
+                    // subscribe to observable
+                    .subscribe((restaurantsResult: Restaurant[]) => {
+                        // assign result to restaurants.
+                        restaurants = restaurantsResult;
+                        // if restaurants is undefined, send server error.
+                        if (!restaurants) {
+                            res.status(500).send('Error: Server Error');
+                        }
+                        // else, send result.
+                        res.json(restaurants.length === 1 ? restaurants[0] : []);
+                    });
             } else if (req.query.name) {
                 // search database by name and return an array of matching restaurants
-                console.log(req.query.name);
-                res.send('Name received.');
+                MariaDBService.findBy<Restaurant>(Constants.K_RESTAURANT, Constants.DS_NAME, req.query.name, false, RestaurantMapper.fromDbToModel)
+                    // just take 1 value.
+                    .pipe(take(1))
+                    // subscribe to observable
+                    .subscribe((restaurantsResult: Restaurant[]) => {
+                        // assign result to restaurants.
+                        restaurants = restaurantsResult;
+                        // if restaurants is undefined, send server error.
+                        if (!restaurants) {
+                            res.status(500).send('Error: Server Error');
+                        }
+                        // else, send result.
+                        res.json(restaurants);
+                    });
             // return every restaurant.
             } else {
-                MariaDBService.findAll<Restaurant>('K_RESTAURANT', RestaurantMapper.fromDbToModel)
+                MariaDBService.findAll<Restaurant>(Constants.K_RESTAURANT, RestaurantMapper.fromDbToModel)
                     // just take 1 value.
                     .pipe( take(1) )
                     // subscribe to observable
