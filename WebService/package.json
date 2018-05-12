@@ -1,0 +1,30 @@
+{
+  "name": "webservice",
+  "version": "0.0.1",
+  "description": "Restaurant info retreiver app.",
+  "main": "dist/index.js",
+  "private": true,
+  "scripts": {
+    "serve": "gulp serve",
+    "start": "node ./bin/www",
+    "gulp": "gulp",
+    "test": "test"
+  },
+  "author": "Jorge Lopez",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.3",
+    "mysql": "^2.15.0",
+    "rxjs": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.11.1",
+    "@types/mysql": "^2.15.4",
+    "del": "^3.0.0",
+    "gulp": "gulpjs/gulp#4ed9a4a3275559c73a396eff7e1fde3824951ebb",
+    "gulp-express": "^0.3.5",
+    "gulp-typescript": "^4.0.2",
+    "typescript": "^2.8.3"
+  }
+}
