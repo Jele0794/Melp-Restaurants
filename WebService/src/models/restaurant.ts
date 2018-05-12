@@ -10,6 +10,10 @@ export class Restaurant {
     public state: string;
     public lat: number;
     public lng: number;
+
+    public toString(): string {
+        return `\'${this.id}\', ${this.rating}, \'${this.name}\', \'${this.site}\', \'${this.email}\', \'${this.phone}\', \'${this.street}\', \'${this.city}\', \'${this.state}\', ${this.lat}, ${this.lng}`;
+    }
 }
 
 export class RestaurantDB {

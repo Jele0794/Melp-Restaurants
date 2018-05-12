@@ -5,6 +5,7 @@ import { MariaDBService } from "../../persistence/maria-db-service";
 import { Observable } from "rxjs";
 import { take } from 'rxjs/operators';
 import { RestaurantMapper } from "../../utils/restaurant-mapper";
+import { Constants } from "../../utils/constants";
 
 export class RestaurantApi {
 
@@ -39,7 +40,18 @@ export class RestaurantApi {
                 res.status(400).send('Error: To create a restaurant, it is needed data.')
             }
             // create restaurant on database.
-            res.json(restaurants);
+            MariaDBService.create<Restaurant>(Constants.K_RESTAURANT, restaurants)
+                .pipe(take(1))
+                .subscribe((restaurantsResult: Restaurant[]) => {
+                    // assign result to restaurants.
+                    restaurants = restaurantsResult;
+                    // if restaurants is undefined, send server error.
+                    if (!restaurants) {
+                        res.status(500).send('Error: Server Error or duplicated data.');
+                    }
+                    // else, send result.
+                    res.json(restaurants.length === 1 ? restaurants[0] : restaurants);
+                });
         });
     }
 
@@ -57,15 +69,39 @@ export class RestaurantApi {
             let restaurants: Restaurant[] = [];
             if (req.query.id) {
                 // search database by id and return an array of matching restaurants
-                console.log(req.query.id);
-                res.send('ID received.');
+                MariaDBService.findBy<Restaurant>(Constants.K_RESTAURANT, 'ID_RESTAURANT', req.query.id, true, RestaurantMapper.fromDbToModel)
+                    // just take 1 value.
+                    .pipe(take(1))
+                    // subscribe to observable
+                    .subscribe((restaurantsResult: Restaurant[]) => {
+                        // assign result to restaurants.
+                        restaurants = restaurantsResult;
+                        // if restaurants is undefined, send server error.
+                        if (!restaurants) {
+                            res.status(500).send('Error: Server Error');
+                        }
+                        // else, send result.
+                        res.json(restaurants.length === 1 ? restaurants[0] : []);
+                    });
             } else if (req.query.name) {
                 // search database by name and return an array of matching restaurants
-                console.log(req.query.name);
-                res.send('Name received.');
+                MariaDBService.findBy<Restaurant>(Constants.K_RESTAURANT, Constants.RESTAURANT_TABLE.DS_NAME, req.query.name, false, RestaurantMapper.fromDbToModel)
+                    // just take 1 value.
+                    .pipe(take(1))
+                    // subscribe to observable
+                    .subscribe((restaurantsResult: Restaurant[]) => {
+                        // assign result to restaurants.
+                        restaurants = restaurantsResult;
+                        // if restaurants is undefined, send server error.
+                        if (!restaurants) {
+                            res.status(500).send('Error: Server Error');
+                        }
+                        // else, send result.
+                        res.json(restaurants);
+                    });
             // return every restaurant.
             } else {
-                MariaDBService.findAll<Restaurant>('K_RESTAURANT', RestaurantMapper.fromDbToModel)
+                MariaDBService.findAll<Restaurant>(Constants.K_RESTAURANT, RestaurantMapper.fromDbToModel)
                     // just take 1 value.
                     .pipe( take(1) )
                     // subscribe to observable
@@ -91,11 +127,28 @@ export class RestaurantApi {
      */
     private updateRoute(router: Router) {
         router.put('/restaurant', (req: Request, res: Response, next: NextFunction) => {
-            let restaurants: Restaurant[] = this.getRestaurantArray(req.body);
+            let restaurant: Restaurant = RestaurantMapper.fromObjToModel(req.body);
+            let columns: string[] = [];
             // validate that restaurants array is not empty.
-            if (restaurants.length === 0) {
+            if (!restaurant) {
                 res.status(400).send('Error: To update data, the system needs at least one restaurant.')
             }
+            for(let key in Constants.RESTAURANT_TABLE) {
+                columns.push(Constants.RESTAURANT_TABLE[key]);
+            }
+            
+            MariaDBService.update<Restaurant>(Constants.K_RESTAURANT, restaurant, columns, Constants.ID_RESTAURANT, restaurant.id, RestaurantMapper.fromModelToDB)
+            .pipe(take(1))
+            .subscribe((restaurantResult: Restaurant) => {
+                // assign result to restaurants.
+                restaurant = restaurantResult;
+                // if restaurants is undefined, send server error.
+                if (!restaurant) {
+                    res.status(500).send('Error: Server Error.');
+                }
+                // else, send result.
+                res.json(restaurant);
+            });
             // iterate restaurants list and update each on database.
         });
     }
@@ -108,11 +161,22 @@ export class RestaurantApi {
      */
     private deleteRoute(router: Router) {
         router.delete('/restaurant', (req: Request, res: Response, next: NextFunction) => {
-            let restaurants: Restaurant[] = this.getRestaurantArray(req.body);
+            let restaurant: Restaurant = RestaurantMapper.fromObjToModel(req.body);
             // validate that restaurants array is not empty.
-            if (restaurants.length === 0) {
+            if (!restaurant) {
                 res.status(400).send('Error: To delete data, the system needs at least one restaurant.')
             }
+
+            MariaDBService.delete<Restaurant>(Constants.K_RESTAURANT, Constants.ID_RESTAURANT, restaurant.id)
+            .pipe(take(1))
+                .subscribe((idDeleted: string) => {
+                    // if restaurants is undefined, send server error.
+                    if (!idDeleted || idDeleted === '') {
+                        res.status(500).send('Error: Server Error.');
+                    }
+                    // else, send result.
+                    res.json(`${idDeleted} was deleted`);
+                });
             // iterate restaurants list and delete each on database.
         })
     }
@@ -135,12 +199,12 @@ export class RestaurantApi {
         // validate if requestBody is an array.
         if (Array.isArray(requestBody)) {
             // assign requestBody to restaurants
-            restaurants = requestBody;
+            restaurants = requestBody.map(req => RestaurantMapper.fromObjToModel(req));
         } else {
             // create an empty array
             restaurants = [];
             // push the requestBody object
-            restaurants.push(requestBody);
+            restaurants.push(RestaurantMapper.fromObjToModel(requestBody));
         }
         return restaurants;
     }
