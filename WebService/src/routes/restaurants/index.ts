@@ -1,6 +1,10 @@
 import { Router, Request, NextFunction } from "express";
 import { Response } from "express";
 import { Restaurant } from "../../models/restaurant";
+import { MariaDBService } from "../../persistence/maria-db-service";
+import { Observable } from "rxjs";
+import { take } from 'rxjs/operators';
+import { RestaurantMapper } from "../../utils/restaurant-mapper";
 
 export class RestaurantApi {
 
@@ -42,12 +46,15 @@ export class RestaurantApi {
     /**
      * Create a get method that accepts an ID or a name as queries to then
      * query for restaurants on a database.
+     * 
+     * If any query is given, return all restaurants.
      *
      * @param router Express Router object.
      */
     private findRoute(router: Router) {
         // search and return an array of matching restaurants.
         router.get('/restaurant', (req: Request, res: Response, next: NextFunction) => {
+            let restaurants: Restaurant[] = [];
             if (req.query.id) {
                 // search database by id and return an array of matching restaurants
                 console.log(req.query.id);
@@ -56,9 +63,22 @@ export class RestaurantApi {
                 // search database by name and return an array of matching restaurants
                 console.log(req.query.name);
                 res.send('Name received.');
+            // return every restaurant.
             } else {
-                // return bad request error
-                res.status(400).send('Error: To find a restaurant, a name or an id is needed.');
+                MariaDBService.findAll<Restaurant>('K_RESTAURANT', RestaurantMapper.fromDbToModel)
+                    // just take 1 value.
+                    .pipe( take(1) )
+                    // subscribe to observable
+                    .subscribe((restaurantsResult: Restaurant[]) => {
+                        // assign result to restaurants.
+                        restaurants = restaurantsResult;
+                        // if restaurants is undefined, send server error.
+                        if (!restaurants) {
+                            res.status(500).send('Error: Server Error');
+                        }
+                        // else, send result.
+                        res.json(restaurants);                            
+                    });
             }
         });
     }
