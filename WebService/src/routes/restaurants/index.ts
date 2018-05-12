@@ -85,7 +85,7 @@ export class RestaurantApi {
                     });
             } else if (req.query.name) {
                 // search database by name and return an array of matching restaurants
-                MariaDBService.findBy<Restaurant>(Constants.K_RESTAURANT, Constants.DS_NAME, req.query.name, false, RestaurantMapper.fromDbToModel)
+                MariaDBService.findBy<Restaurant>(Constants.K_RESTAURANT, Constants.RESTAURANT_TABLE.DS_NAME, req.query.name, false, RestaurantMapper.fromDbToModel)
                     // just take 1 value.
                     .pipe(take(1))
                     // subscribe to observable
@@ -127,11 +127,28 @@ export class RestaurantApi {
      */
     private updateRoute(router: Router) {
         router.put('/restaurant', (req: Request, res: Response, next: NextFunction) => {
-            let restaurants: Restaurant[] = this.getRestaurantArray(req.body);
+            let restaurant: Restaurant = RestaurantMapper.fromObjToModel(req.body);
+            let columns: string[] = [];
             // validate that restaurants array is not empty.
-            if (restaurants.length === 0) {
+            if (!restaurant) {
                 res.status(400).send('Error: To update data, the system needs at least one restaurant.')
             }
+            for(let key in Constants.RESTAURANT_TABLE) {
+                columns.push(Constants.RESTAURANT_TABLE[key]);
+            }
+            
+            MariaDBService.update<Restaurant>(Constants.K_RESTAURANT, restaurant, columns, Constants.ID_RESTAURANT, restaurant.id, RestaurantMapper.fromModelToDB)
+            .pipe(take(1))
+            .subscribe((restaurantResult: Restaurant) => {
+                // assign result to restaurants.
+                restaurant = restaurantResult;
+                // if restaurants is undefined, send server error.
+                if (!restaurant) {
+                    res.status(500).send('Error: Server Error.');
+                }
+                // else, send result.
+                res.json(restaurant);
+            });
             // iterate restaurants list and update each on database.
         });
     }

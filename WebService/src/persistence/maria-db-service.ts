@@ -1,5 +1,6 @@
 import { createConnection, Connection, ConnectionConfig, QueryFunction, MysqlError } from "mysql";
 import { Observable, Subject } from 'rxjs';
+import { Constants } from "../utils/constants";
 
 export class MariaDBService {
 
@@ -66,6 +67,12 @@ export class MariaDBService {
         return subject.asObservable();        
     }
 
+    /**
+     * Create data on db.
+     *
+     * @param tableName DB table name.
+     * @param values List of data to create.
+     */
     public static create<T>(tableName: string, values: T[]): Observable<T[]> {
         let connection: Connection = this.generateConnection();
         let subject: Subject<T[]> = new Subject();
@@ -96,6 +103,53 @@ export class MariaDBService {
                         subject.next(undefined)                        
                     }
                     subject.next(values)
+                });
+            });
+
+        });
+
+        return subject.asObservable();
+    }
+
+    public static update<T>(tableName: string, value: T, columns: string[], identifier: string, whereValue: string, mapper: any): Observable<T> {
+        let connection: Connection = this.generateConnection();
+        let subject: Subject<T> = new Subject();
+        let valuesString: string[] = [];
+        let sql: string;
+        let reducedValues: string;
+        let modDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        let columnsStr: string[] = [];
+        value = mapper(value);
+        let i = 0;
+        for(let key in value) {
+            if(key === columns[i]) {
+                let columnStr = columns[i++] + ' = ' + `\'${value[key]}\'`;
+                columnsStr.push(columnStr);
+            }
+        }
+        columnsStr.push(Constants.RESTAURANT_TABLE.DT_LAST_MODIFICATION + `= \'${modDate}\'`);
+        columnsStr.push(Constants.RESTAURANT_TABLE.ID_LAST_USER_MODIFIER + '=' + 0);
+        columnsStr.push(Constants.RESTAURANT_TABLE.FG_ACTIVE + '=' + true);
+        sql = `UPDATE ${tableName} SET ${columnsStr.join(', ')} WHERE ${identifier} = ?`;
+
+        connection.beginTransaction((error) => {
+            if (error) {
+                this.handleSqlError(error, connection);
+                subject.next(undefined)
+            }
+            // insert values.
+            connection.query(sql, [whereValue], (error, results) => {
+                if (error) {
+                    connection.rollback(() => this.handleSqlError(error, connection));
+                    subject.next(undefined)
+                }
+                // commit changes.
+                connection.commit((error) => {
+                    if (error) {
+                        connection.rollback(() => this.handleSqlError(error, connection));
+                        subject.next(undefined)
+                    }
+                    subject.next(value);
                 });
             });
 

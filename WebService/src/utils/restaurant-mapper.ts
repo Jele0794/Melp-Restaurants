@@ -23,6 +23,28 @@ export class RestaurantMapper {
 
         return restaurant;
     }
+    /**
+     * Mapps from js model to database model.
+     *
+     * @param restaurantDB Object obtained directly from DB.
+     */
+    public static fromModelToDB(restaurant: Restaurant): RestaurantDB {
+        let restaurantDB: RestaurantDB = new RestaurantDB();
+
+        restaurantDB.ID_RESTAURANT = restaurant.id;
+        restaurantDB.NU_RATING = restaurant.rating;
+        restaurantDB.DS_NAME = restaurant.name;
+        restaurantDB.DS_SITE = restaurant.site;
+        restaurantDB.DS_EMAIL = restaurant.email;
+        restaurantDB.DS_PHONE = restaurant.phone;
+        restaurantDB.DS_STREET = restaurant.street;
+        restaurantDB.DS_CITY = restaurant.city;
+        restaurantDB.DS_STATE = restaurant.state;
+        restaurantDB.FL_LAT = restaurant.lat;
+        restaurantDB.FL_LNG = restaurant.lng;
+
+        return restaurantDB;
+    }
 
     /**
      * Returns a created restaurant.
