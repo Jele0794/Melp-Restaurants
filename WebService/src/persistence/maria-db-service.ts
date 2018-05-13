@@ -235,11 +235,11 @@ export class MariaDBService {
      */
     private static generateConnection(): Connection {
         let connectionConfig: ConnectionConfig = {
-            host: 'localhost',
+            host: 'h7xe2knj2qb6kxal.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
             port: 3306,
-            database: 'MelpRestaurantsApp',
-            user: 'MelpDBAdmin',
-            password: 'm3194ppDB'
+            database: 'uew4rsf1o7dbevi2',
+            user: 'z71xe9jjia9th7oc',
+            password: 'ti372nxuytzs2jna'
         };
         return createConnection(connectionConfig);
     }
