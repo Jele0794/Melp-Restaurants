@@ -1,0 +1,9 @@
+# System files
+.DS_Store
+Thumbs.db
+
+# Dependency directories
+node_modules/
+
+# WebService
+dist/

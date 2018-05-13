@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "serve": "gulp serve",
-    "start": "node ./bin/www",
+    "start": "gulp build",
     "build": "gulp build",
     "gulp": "gulp",
     "test": "test"
